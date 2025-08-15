@@ -7,17 +7,15 @@ end
 
 defmodule Solution2 do
   def solve() do
-    r =
-      "./lib/input-test.txt"
+    flat_dict =
+      "./lib/input.txt"
       |> File.stream!()
       |> Enum.map(fn line ->
         line
         |> String.trim()
         |> String.graphemes()
       end)
-
-    ri =
-      Enum.with_index(r)
+      |> Enum.with_index()
       |> Enum.map(fn {list, idx} ->
         list
         |> Enum.with_index()
@@ -28,40 +26,37 @@ defmodule Solution2 do
       |> List.flatten()
 
     result =
-      ri
-      |> iterate_stripe(ri, 0)
+      flat_dict
+      |> find_x(flat_dict, 0)
 
-    IO.puts("Solution2: #{result}")
+    IO.puts("Solution 2: #{result}")
   end
 
-  def iterate_stripe(_mat, [], acc) do
+  def find_x(_mat, [], acc) do
     acc
   end
 
-  def iterate_stripe(mat, tail, acc) do
-    [head | tail] = tail
+  def find_x(mat, [{x, y, "A"} | tail], acc) do
+    acc = if is_x_mas(mat, {x, y}), do: acc + 1, else: acc
+    find_x(mat, tail, acc)
+  end
 
-    case head do
-      {x, y, "A"} ->
-        is_x_mas(mat, {x, y})
-        iterate_stripe(mat, tail, acc + 1)
-
-      _ ->
-        iterate_stripe(mat, tail, acc)
-    end
+  def find_x(mat, [_ | tail], acc) do
+    find_x(mat, tail, acc)
   end
 
   def is_x_mas(mat, {x, y}) do
-    [:hor, :ver, :diagleft, :diagright]
-    |> Enum.map(&get_line(mat, {x, y}, &1))
-    |> Enum.reject(fn list ->
-      list
-      |> Enum.any?(&is_nil(&1))
+    [:diagleft, :diagright]
+    |> Enum.all?(fn dir ->
+      line = get_line(mat, {x, y}, dir)
+
+      if Enum.any?(line, &is_nil/1) do
+        false
+      else
+        word = line |> Enum.map(&elem(&1, 2)) |> Enum.join()
+        word in ["MAS", "SAM"]
+      end
     end)
-      |> Enum.map(& elem(&1, 2)
-    |> Enum.map(fn {_, _, letters} -> Enum.join(letters) end)
-    |> Enum.find(fn word -> word == "MAS" || word == "SAM" end)
-    |> length() >= 2
   end
 
   def get_line(mat, pos, :hor) do
@@ -162,24 +157,20 @@ defmodule Solution1 do
       ri
       |> find_x_mas(ri, 0)
 
-    IO.puts("Solution1: #{result}")
+    IO.puts("Solution 1: #{result}")
   end
 
   def find_x_mas(_, [], acc) do
-    IO.puts("end")
     acc
   end
 
   def find_x_mas(mat, tail, acc) do
     case tail do
       [{x, y, "X"} | rest] ->
-        # IO.inspect(tail)
-        IO.puts("found X")
         found = expand(mat, {x, y})
         find_x_mas(mat, rest, acc + found)
 
       [_head | rest] ->
-        # IO.inspect(head)
         find_x_mas(mat, rest, acc)
 
       [] ->
