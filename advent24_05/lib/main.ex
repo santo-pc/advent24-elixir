@@ -1,6 +1,117 @@
 defmodule Main do
   def main(_args \\ []) do
-    Solution1.solve("./lib/input-test.txt")
+    # Solution1.solve("./lib/input.txt")
+    Solution2.solve("./lib/input-test.txt")
+  end
+end
+
+defmodule Solution2 do
+  def solve(input) do
+    {rules, updates} =
+      input
+      |> File.stream!()
+      |> Enum.map(fn line ->
+        line
+        |> String.trim()
+        |> String.split("|")
+      end)
+      |> Enum.split_while(fn line -> length(line) == 2 end)
+      |> IO.inspect()
+
+    rules =
+      rules
+      |> Enum.map(fn list -> Enum.map(list, &String.to_integer/1) end)
+      |> Enum.group_by(fn [k, _v] -> k end, fn [_k, v] -> v end)
+      |> IO.inspect()
+
+    updates
+    |> IO.inspect()
+    |> Enum.reject(&Enum.any?(&1, fn i -> i == "" end))
+    |> List.flatten()
+    |> Enum.map(fn line ->
+      line
+      |> String.split(",")
+      |> Enum.map(&String.to_integer(&1))
+    end)
+    |> Enum.find(&(is_correct(&1, rules) == nil))
+    |> Enum.map(fn wrong_update -> fix_update(wrong_update, rules) end)
+    |> Enum.map(fn update -> Enum.at(update, update |> length() |> div(2)) end)
+    |> Enum.sum()
+    |> IO.inspect()
+  end
+
+  def fix_update(update, rules) do
+    {new_list, _} =
+      update
+      |> Enum.reduce({[], nil}, fn current, {acc, prev} ->
+        if prev && should_swap?(prev, current, rules) do
+          # swap previous and current
+          # replace last element of acc with current, then prepend prev
+          acc =
+            acc
+            |> List.replace_at(length(acc) - 1, current)
+            # ensures acc is always a list
+            |> List.wrap()
+
+          {[prev | acc], current}
+        else
+          {[current | acc], current}
+        end
+      end)
+
+    Enum.reverse(new_list)
+  end
+
+  def should_swap?(a, b, rules) do
+    case rules[b] do
+      nil ->
+        true
+
+      rules_b ->
+        rules_b
+        |> Enum.any?(fn x -> x == a end)
+    end
+  end
+
+  def swap(list, i, j) do
+    vi = Enum.at(list, i)
+    vj = Enum.at(list, j)
+
+    list
+    |> List.replace_at(i, vj)
+    |> List.replace_at(j, vi)
+  end
+
+  # base case
+  def is_correct([], _) do
+    IO.puts("end ")
+    true
+  end
+
+  # check 
+  def is_correct(tail, dict) do
+    [current | tail] = tail
+
+    # try to find one rule that challenges current before all tail items
+    correct =
+      tail
+      |> Enum.all?(fn item ->
+        case dict[item] do
+          nil -> true
+          rules_item -> not Enum.member?(rules_item, current)
+        end
+      end)
+
+    IO.puts(
+      "Current #{inspect(current, pretty: true, charlists: :as_lists)} vs #{inspect(tail, pretty: true, charlists: :as_lists)}: valid?: #{inspect(correct, pretty: true, charlists: :as_lists)}"
+    )
+
+    if correct do
+      is_correct(tail, dict)
+    else
+      IO.puts("end- false")
+      nil
+    end
   end
 end
 
@@ -17,83 +128,60 @@ defmodule Solution1 do
       |> Enum.split_while(fn line -> length(line) == 2 end)
       |> IO.inspect()
 
-    left =
+    dict =
       rules
       |> Enum.map(fn list -> Enum.map(list, &String.to_integer/1) end)
       |> Enum.group_by(fn [k, _v] -> k end, fn [_k, v] -> v end)
       |> IO.inspect()
 
-    right =
-      rules
-      |> Enum.map(fn list -> Enum.map(list, &String.to_integer/1) end)
-      |> Enum.group_by(fn [_k, v] -> v end, fn [k, _v] -> k end)
-      |> IO.inspect()
-
     updates
+    |> IO.inspect()
     |> Enum.reject(&Enum.any?(&1, fn i -> i == "" end))
     |> List.flatten()
     |> Enum.map(fn line ->
       line
-      |> IO.inspect()
       |> String.split(",")
-      |> IO.inspect()
       |> Enum.map(&String.to_integer(&1))
     end)
-    # |> IO.inspect()
     |> Enum.map(fn update ->
-      is_correct(update, left, right)
+      case is_correct(update, dict) do
+        true -> Enum.at(update, update |> length() |> div(2))
+        nil -> nil
+      end
     end)
     |> Enum.reject(&is_nil(&1))
-    |> Enum.filter(&(&1 == true))
     |> Enum.sum()
     |> IO.inspect()
   end
 
-  def is_correct(update, left, right) do
-    is_correct(update, left, right, update)
+  # base case
+  def is_correct([], _) do
+    IO.puts("end ")
+    true
   end
 
-  def is_correct(update, left, right, update) do
-    test([], update, left, right, update)
-  end
-
-  def test(_head, [], _left, _right, update) do
-    IO.puts("end")
-    Enum.at(update, update |> length() |> div(2))
-  end
-
-  def test(head, tail, left, right, update) do
+  # check 
+  def is_correct(tail, dict) do
     [current | tail] = tail
-    IO.puts("-")
-    IO.inspect(head, charlists: :as_list)
-    IO.inspect(current, charlists: :as_list)
-    IO.inspect(tail, charlists: :as_list)
 
-    correct_right =
-      case left[current] do
-        nil ->
-          IO.puts("not in map (left) #{current}")
-          true
+    # try to find one rule that challenges current before all tail items
+    correct =
+      tail
+      |> Enum.all?(fn item ->
+        case dict[item] do
+          nil -> true
+          rules_item -> not Enum.member?(rules_item, current)
+        end
+      end)
 
-        afters ->
-          tail
-          |> Enum.all?(fn x -> x in afters end)
-      end
+    IO.puts(
+      "Current #{inspect(current, pretty: true, charlists: :as_lists)} vs #{inspect(tail, pretty: true, charlists: :as_lists)}: valid?: #{inspect(correct, pretty: true, charlists: :as_lists)}"
+    )
 
-    # correct_left =
-    #   case right[current] do
-    #     nil ->
-    #       IO.puts("not in map (right) #{current}")
-    #       true
-    #
-    #     befores ->
-    #       head
-    #       |> Enum.all?(fn x -> x in befores end)
-    #   end
-
-    if correct_right do
-      test([current | head], tail, left, right, update)
+    if correct do
+      is_correct(tail, dict)
     else
+      IO.puts("end- false")
       nil
     end
   end
