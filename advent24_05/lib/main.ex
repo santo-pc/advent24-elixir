@@ -80,18 +80,18 @@ defmodule Solution1 do
           |> Enum.all?(fn x -> x in afters end)
       end
 
-    correct_left =
-      case right[current] do
-        nil ->
-          IO.puts("not in map (right) #{current}")
-          true
+    # correct_left =
+    #   case right[current] do
+    #     nil ->
+    #       IO.puts("not in map (right) #{current}")
+    #       true
+    #
+    #     befores ->
+    #       head
+    #       |> Enum.all?(fn x -> x in befores end)
+    #   end
 
-        befores ->
-          head
-          |> Enum.all?(fn x -> x in befores end)
-      end
-
-    if correct_right && correct_left do
+    if correct_right do
       test([current | head], tail, left, right, update)
     else
       nil
