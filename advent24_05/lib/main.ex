@@ -24,18 +24,31 @@ defmodule Solution2 do
       |> Enum.group_by(fn [k, _v] -> k end, fn [_k, v] -> v end)
       |> IO.inspect()
 
-    updates
-    |> IO.inspect()
-    |> Enum.reject(&Enum.any?(&1, fn i -> i == "" end))
-    |> List.flatten()
-    |> Enum.map(fn line ->
-      line
-      |> String.split(",")
-      |> Enum.map(&String.to_integer(&1))
-    end)
-    |> Enum.find(&(is_correct(&1, rules) == nil))
+    invalids =
+      updates
+      |> IO.inspect()
+      |> Enum.reject(&Enum.any?(&1, fn i -> i == "" end))
+      |> List.flatten()
+      |> Enum.map(fn line ->
+        line
+        |> String.split(",")
+        |> Enum.map(&String.to_integer(&1))
+      end)
+      |> Enum.filter(&(is_valid(&1, rules) == nil))
+
+    IO.puts("These are the invalids")
+    IO.inspect(invalids)
+
+    invalids
     |> Enum.map(fn wrong_update -> fix_update(wrong_update, rules) end)
-    |> Enum.map(fn update -> Enum.at(update, update |> length() |> div(2)) end)
+    |> IO.inspect()
+    |> Enum.map(fn update ->
+      Enum.at(
+        update,
+        update |> length() |> div(2)
+      )
+      |> IO.inspect()
+    end)
     |> Enum.sum()
     |> IO.inspect()
   end
@@ -44,7 +57,7 @@ defmodule Solution2 do
     {new_list, _} =
       update
       |> Enum.reduce({[], nil}, fn current, {acc, prev} ->
-        if prev && should_swap?(prev, current, rules) do
+        if prev != nil && should_swap?(prev, current, rules) do
           # swap previous and current
           # replace last element of acc with current, then prepend prev
           acc =
@@ -59,7 +72,8 @@ defmodule Solution2 do
         end
       end)
 
-    Enum.reverse(new_list)
+    IO.puts("New list")
+    Enum.reverse(new_list) |> IO.inspect()
   end
 
   def should_swap?(a, b, rules) do
@@ -83,13 +97,13 @@ defmodule Solution2 do
   end
 
   # base case
-  def is_correct([], _) do
+  def is_valid([], _) do
     IO.puts("end ")
     true
   end
 
-  # check 
-  def is_correct(tail, dict) do
+  # check
+  def is_valid(tail, dict) do
     [current | tail] = tail
 
     # try to find one rule that challenges current before all tail items
@@ -107,7 +121,7 @@ defmodule Solution2 do
     )
 
     if correct do
-      is_correct(tail, dict)
+      is_valid(tail, dict)
     else
       IO.puts("end- false")
       nil
@@ -144,7 +158,7 @@ defmodule Solution1 do
       |> Enum.map(&String.to_integer(&1))
     end)
     |> Enum.map(fn update ->
-      case is_correct(update, dict) do
+      case is_valid(update, dict) do
         true -> Enum.at(update, update |> length() |> div(2))
         nil -> nil
       end
@@ -155,13 +169,13 @@ defmodule Solution1 do
   end
 
   # base case
-  def is_correct([], _) do
+  def is_valid([], _) do
     IO.puts("end ")
     true
   end
 
   # check 
-  def is_correct(tail, dict) do
+  def is_valid(tail, dict) do
     [current | tail] = tail
 
     # try to find one rule that challenges current before all tail items
@@ -179,7 +193,7 @@ defmodule Solution1 do
     )
 
     if correct do
-      is_correct(tail, dict)
+      is_valid(tail, dict)
     else
       IO.puts("end- false")
       nil
