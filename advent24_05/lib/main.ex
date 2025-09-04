@@ -1,7 +1,7 @@
 defmodule Main do
   def main(_args \\ []) do
     # Solution1.solve("./lib/input.txt")
-    Solution2.solve("./lib/input-test.txt")
+    Solution2.solve("./lib/input.txt")
   end
 end
 
@@ -24,7 +24,7 @@ defmodule Solution2 do
       |> Enum.group_by(fn [k, _v] -> k end, fn [_k, v] -> v end)
       |> IO.inspect()
 
-    invalids =
+    fixed_ones =
       updates
       |> IO.inspect()
       |> Enum.reject(&Enum.any?(&1, fn i -> i == "" end))
@@ -35,70 +35,21 @@ defmodule Solution2 do
         |> Enum.map(&String.to_integer(&1))
       end)
       |> Enum.filter(&(is_valid(&1, rules) == nil))
+      |> Enum.map(fn wrong_update -> Bubble.fix_update(wrong_update, rules) end)
 
-    IO.puts("These are the invalids")
-    IO.inspect(invalids)
-
-    invalids
-    |> Enum.map(fn wrong_update -> fix_update(wrong_update, rules) end)
-    |> IO.inspect()
+    fixed_ones
     |> Enum.map(fn update ->
       Enum.at(
         update,
         update |> length() |> div(2)
       )
-      |> IO.inspect()
     end)
     |> Enum.sum()
     |> IO.inspect()
   end
 
-  def fix_update(update, rules) do
-    {new_list, _} =
-      update
-      |> Enum.reduce({[], nil}, fn current, {acc, prev} ->
-        if prev != nil && should_swap?(prev, current, rules) do
-          # swap previous and current
-          # replace last element of acc with current, then prepend prev
-          acc =
-            acc
-            |> List.replace_at(length(acc) - 1, current)
-            # ensures acc is always a list
-            |> List.wrap()
-
-          {[prev | acc], current}
-        else
-          {[current | acc], current}
-        end
-      end)
-
-    IO.puts("New list")
-    Enum.reverse(new_list) |> IO.inspect()
-  end
-
-  def should_swap?(a, b, rules) do
-    case rules[b] do
-      nil ->
-        true
-
-      rules_b ->
-        rules_b
-        |> Enum.any?(fn x -> x == a end)
-    end
-  end
-
-  def swap(list, i, j) do
-    vi = Enum.at(list, i)
-    vj = Enum.at(list, j)
-
-    list
-    |> List.replace_at(i, vj)
-    |> List.replace_at(j, vi)
-  end
-
   # base case
   def is_valid([], _) do
-    IO.puts("end ")
     true
   end
 
@@ -116,14 +67,9 @@ defmodule Solution2 do
         end
       end)
 
-    IO.puts(
-      "Current #{inspect(current, pretty: true, charlists: :as_lists)} vs #{inspect(tail, pretty: true, charlists: :as_lists)}: valid?: #{inspect(correct, pretty: true, charlists: :as_lists)}"
-    )
-
     if correct do
       is_valid(tail, dict)
     else
-      IO.puts("end- false")
       nil
     end
   end
@@ -170,7 +116,6 @@ defmodule Solution1 do
 
   # base case
   def is_valid([], _) do
-    IO.puts("end ")
     true
   end
 
@@ -195,8 +140,52 @@ defmodule Solution1 do
     if correct do
       is_valid(tail, dict)
     else
-      IO.puts("end- false")
       nil
+    end
+  end
+end
+
+defmodule Bubble do
+  # Public function
+  def fix_update(list, rules) do
+    # Repeat passes until fully sorted
+    do_bubble(list, length(list), rules)
+  end
+
+  # Private recursive function: stop when no more passes
+  defp do_bubble(list, 0, _rules), do: list
+
+  defp do_bubble(list, n, rules) do
+    list
+    |> bubble_pass(rules)
+    |> do_bubble(n - 1, rules)
+  end
+
+  # Private single-pass bubble
+  defp bubble_pass([a, b | rest], rules) do
+    if should_swap?(a, b, rules) do
+      # swap a and b
+      [b | bubble_pass([a | rest], rules)]
+    else
+      [a | bubble_pass([b | rest], rules)]
+    end
+  end
+
+  # Base case for single-element or empty list
+  defp bubble_pass(list, _rules), do: list
+
+  # Example swap function (replace with your rules)
+  defp should_swap?(a, b, rules) do
+    case rules[b] do
+      nil ->
+        false
+
+      rules_b ->
+        is_b_before_a =
+          rules_b
+          |> Enum.any?(fn x -> x == a end)
+
+        is_b_before_a
     end
   end
 end
